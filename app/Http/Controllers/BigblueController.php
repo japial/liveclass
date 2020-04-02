@@ -13,20 +13,18 @@ use BigBlueButton\Parameters\DeleteRecordingsParameters;
 use Illuminate\Support\Facades\Auth;
 use App\Meeting;
 
-class BigblueController extends Controller
-{
-     /**
+class BigblueController extends Controller {
+
+    /**
      * Create a new controller instance.
      *
      * @return void
      */
-    public function __construct()
-    {
+    public function __construct() {
         $this->middleware('auth');
     }
-    
-    public function create($id)
-    {
+
+    public function create($id) {
         $meeting = Meeting::findOrFail($id);
         $this->setConfigValue();
         $isRecordingTrue = TRUE;
@@ -36,9 +34,9 @@ class BigblueController extends Controller
             $bbb = new BigBlueButton();
 
             $createMeetingParams = new CreateMeetingParameters($meeting->link, $meeting->name);
-            $createMeetingParams->setAttendeePassword($meeting->attendee);
-            $createMeetingParams->setModeratorPassword($meeting->moderator);
-            $createMeetingParams->setLogoutUrl(base_url());
+            $createMeetingParams->setModeratorPassword($meeting->password);
+            $createMeetingParams->setAttendeePassword('password');
+            $createMeetingParams->setLogoutUrl(url('/'));
             $createMeetingParams->setDuration($duration);
             $createMeetingParams->setMaxParticipants($participant);
             if ($isRecordingTrue) {
@@ -49,40 +47,41 @@ class BigblueController extends Controller
 
             $response = $bbb->createMeeting($createMeetingParams);
             if ($response->getReturnCode() == 'FAILED') {
-                redirect()->route('home')->with('alert', 'Failed to Create Meeting');
+                return redirect()->route('home')->with('alert', 'Failed to Create Meeting');
             } else {
-                $joinUrl = $this->getJoinUrl($meeting->mid, $meeting->moderator);
-                redirect($joinUrl);
+                $joinUrl = $this->getJoinUrl($meeting->link, $meeting->password);
+                return redirect($joinUrl);
             }
         } catch (\Exception $e) {
-             redirect('/live/meeting/');
+            return redirect()->route('home')->with('alert', 'An Error Occured');
         }
     }
 
-    public function join($id)
-    {
+    public function join($slug) {
         $this->setConfigValue();
-        $meeting = Meeting::findOrFail($id);
-        $joinUrl = $this->getJoinUrl($meeting->mid, $meeting->attendee);
-        redirect($joinUrl);
+        $meeting = Meeting::where('link', $slug)->first();
+        if($meeting){
+            $joinUrl = $this->getJoinUrl($meeting->link, 'password');
+            return redirect($joinUrl);
+        }
+        return redirect()->route('home')->with('alert', 'Wrong Joining URL');
     }
 
-    private function getJoinUrl($meetingID, $password)
-    {
+    private function getJoinUrl($meetingID, $password) {
         $bbb = new BigBlueButton();
         $userData = Auth::user();
-        $joinMeetingParams = new JoinMeetingParameters($meetingID,  $userData->name, $password);
+        $joinMeetingParams = new JoinMeetingParameters($meetingID, $userData->name, $password);
         $joinMeetingParams->setRedirect(true);
         $joinMeetingParams->setJoinViaHtml5(true);
         $url = $bbb->getJoinMeetingURL($joinMeetingParams);
         return $url;
     }
 
-    private function setConfigValue()
-    {
+    private function setConfigValue() {
         $securitySalt = 'GyDfduxnfHZJgHzpuIJ0l6qr0exXTVvD45AMQheUA';
         $serverBaseUrl = 'https://classlivebd.com/bigbluebutton/';
         putenv("BBB_SECURITY_SALT=$securitySalt");
         putenv("BBB_SERVER_BASE_URL=$serverBaseUrl");
     }
+
 }

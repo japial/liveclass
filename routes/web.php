@@ -20,4 +20,6 @@ Route::get('/', function () {
 Auth::routes();
 
 Route::get('/home', 'HomeController@index')->name('home');
+Route::get('/go-live/{id}', 'BigblueController@create')->name('moderator.join');
+Route::get('/join/{slug}', 'BigblueController@join')->name('attendee.join');
 Route::post('/meeting', 'MeetingController@store')->name('meeting.store');
