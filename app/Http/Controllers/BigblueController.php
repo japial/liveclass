@@ -15,6 +15,8 @@ use App\Meeting;
 
 class BigblueController extends Controller {
 
+    private $securitySalt = '8cd8ef52e8e101574e400365b55e11a6';
+    private $serverBaseUrl = 'http://test-install.blindsidenetworks.com/bigbluebutton/';
     /**
      * Create a new controller instance.
      *
@@ -22,11 +24,12 @@ class BigblueController extends Controller {
      */
     public function __construct() {
         $this->middleware('auth');
+        putenv("BBB_SECURITY_SALT=$this->securitySalt");
+        putenv("BBB_SERVER_BASE_URL=$this->serverBaseUrl");
     }
 
     public function create($id) {
         $meeting = Meeting::findOrFail($id);
-        $this->setConfigValue();
         $isRecordingTrue = TRUE;
         $duration = 40;
         $participant = 51;
@@ -58,7 +61,6 @@ class BigblueController extends Controller {
     }
 
     public function join($slug) {
-        $this->setConfigValue();
         $meeting = Meeting::where('link', $slug)->first();
         if($meeting){
             $joinUrl = $this->getJoinUrl($meeting->link, 'password');
@@ -75,13 +77,6 @@ class BigblueController extends Controller {
         $joinMeetingParams->setJoinViaHtml5(true);
         $url = $bbb->getJoinMeetingURL($joinMeetingParams);
         return $url;
-    }
-
-    private function setConfigValue() {
-        $securitySalt = 'GyDfduxnfHZJgHzpuIJ0l6qr0exXTVvD45AMQheUA';
-        $serverBaseUrl = 'https://classlivebd.com/bigbluebutton/';
-        putenv("BBB_SECURITY_SALT=$securitySalt");
-        putenv("BBB_SERVER_BASE_URL=$serverBaseUrl");
     }
 
 }
